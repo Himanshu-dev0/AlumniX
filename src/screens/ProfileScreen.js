@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,15 +11,15 @@ import {
   TouchableOpacity
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 
 export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    course: "",
+    Department: "",
     graduation_year: "",
     skills: "",
     job_title: "",
@@ -32,14 +32,52 @@ export default function ProfileScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const save = async () => {
-    Alert.alert("Saved", "Profile saved locally (no backend yet)");
+    try {
+      setLoading(true);
+
+      const response = await fetch("http://10.111.242.75:3000/api/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(form)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert("Success", "Profile saved to database");
+
+        // Reset form after save
+        setForm({
+          name: "",
+          email: "",
+          phone: "",
+          Department: "",
+          graduation_year: "",
+          skills: "",
+          job_title: "",
+          company: "",
+          location: "",
+          linkedin_profile: "",
+        });
+      } else {
+        Alert.alert("Error", data.error || "Something went wrong");
+      }
+
+    } catch (error) {
+      Alert.alert("Error", "Cannot connect to server");
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fieldConfig = {
     name: { placeholder: "NAME", keyboardType: "default" },
     email: { placeholder: "EMAIL", keyboardType: "email-address" },
     phone: { placeholder: "PHONE", keyboardType: "phone-pad" },
-    course: { placeholder: "COURSE", keyboardType: "default" },
+    department: { placeholder: "Department", keyboardType: "default" },
     graduation_year: { placeholder: "GRADUATION YEAR", keyboardType: "numeric" },
     skills: { placeholder: "SKILLS", keyboardType: "default" },
     job_title: { placeholder: "JOB TITLE", keyboardType: "default" },
@@ -66,7 +104,10 @@ export default function ProfileScreen() {
                 <Text style={styles.sectionLabel}>🔗 LinkedIn</Text>
               )}
               <TextInput
-                placeholder={fieldConfig[key]?.placeholder ?? key.replace(/_/g, " ").toUpperCase()}
+                placeholder={
+                  fieldConfig[key]?.placeholder ??
+                  key.replace(/_/g, " ").toUpperCase()
+                }
                 placeholderTextColor="#7e7c7c"
                 style={[
                   styles.input,
@@ -75,16 +116,22 @@ export default function ProfileScreen() {
                 value={form[key]}
                 onChangeText={(v) => update(key, v)}
                 keyboardType={fieldConfig[key]?.keyboardType ?? "default"}
-                autoCapitalize={key === "linkedin_profile" ? "none" : "sentences"}
+                autoCapitalize={
+                  key === "linkedin_profile" ? "none" : "sentences"
+                }
                 autoCorrect={key === "linkedin_profile" ? false : true}
               />
             </View>
           ))}
 
           <View style={{ marginTop: 20 }}>
-            <TouchableOpacity style={styles.button} onPress={save}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={save}
+              disabled={loading}
+            >
               <Text style={{ color: "#fff", fontWeight: "600" }}>
-                Save Profile
+                {loading ? "Saving..." : "Save Profile"}
               </Text>
             </TouchableOpacity>
           </View>
